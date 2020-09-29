@@ -123,9 +123,10 @@ console.log(querySpec);
 
 // // read all items in the Items container
 
-dropGraph();
 async function asyncCall() {
   try {
+    dropGraph();
+    const graphData = [];
     const { resources: items } = await container.items
       .query(querySpec)
       .fetchAll();
@@ -135,29 +136,45 @@ async function asyncCall() {
       let npi = item["National Provider Identifier "];
       let procedureCode = item.HCPCS_CODE;
       let location = item["Street Address 1"];
-      console.log(npi);
-      console.log(procedureCode);
-      console.log(location);
-      clientGraph
-        .open()
-        .then(addVertex1(npi))
-        .then(addVertex2(procedureCode))
-        .then(addVertex3(location))
-        .then(addEdge1(npi, procedureCode))
-        .then(addEdge2(npi, location))
-        .then(countVertices)
-        .catch((err) => {
-          console.error("Error running query...");
-          console.error(err);
-        })
-        .then((res) => {
-          clientGraph.close();
-          finish();
-        })
-        .catch((err) => console.error("Fatal error:", err));
+      graphData.push({
+        npi: npi,
+        procedureCode: procedureCode,
+        location: location,
+      });
     });
+    console.log(graphData);
+    return graphData;
   } catch (err) {
     console.error(err.message);
   }
 }
-asyncCall().then(console.log("Done with connecting to nonGraph DB"));
+function graphDataForLoop(graphData) {
+  console.log("for loop initiated");
+
+  for (i = 0; graphData.length; i++) {
+    clientGraph
+      .open()
+      .then(addVertex1(graphData[i].npi))
+      .then(addVertex2(graphData[i].procedureCode))
+      .then(addVertex3(graphData[i].location))
+      .then(addEdge1(graphData[i].npi, graphData[i].procedureCode))
+      .then(addEdge2(graphData[i].npi, graphData[i].location))
+      .then(countVertices)
+      .catch((err) => {
+        console.error("Error running query...");
+        console.error(err);
+      })
+      .then((res) => {
+        clientGraph.close();
+        finish();
+      })
+      .catch((err) => console.error("Fatal error:", err));
+  }
+}
+const graphData = asyncCall();
+console.log(graphData);
+graphDataForLoop(graphData);
+
+// graphDataForLoop(graphData);
+
+//for loop
